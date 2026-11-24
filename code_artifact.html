@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>スマイル＆ドーナツシューティング</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* 小学生にも読みやすく楽しい丸文字フォントと背景アニメーション */
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(160deg, #e0f7fe 0%, #fef9c3 50%, #fce7f3 100%);
+      color: #1e293b;
+      overflow-x: hidden;
+    }
+
+    /* 楽しい立体感（バブル＆ポップ）ボタン */
+    .pop-btn {
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.15s ease;
+    }
+    .pop-btn:hover:not(:disabled) {
+      filter: brightness(1.04);
+      transform: translateY(-2px);
+    }
+    .pop-btn:active:not(:disabled) {
+      transform: translateY(3px);
+    }
+
+    .btn-start {
+      background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+      box-shadow: 0 6px 0 #14532d, 0 10px 18px rgba(22, 163, 74, 0.35);
+    }
+    .btn-start:active:not(:disabled) {
+      box-shadow: 0 2px 0 #14532d, 0 4px 8px rgba(22, 163, 74, 0.3);
+    }
+
+    .btn-retry {
+      background: linear-gradient(180deg, #fb923c 0%, #ea580c 100%);
+      box-shadow: 0 6px 0 #7c2d12, 0 10px 18px rgba(234, 88, 12, 0.35);
+    }
+    .btn-retry:active:not(:disabled) {
+      box-shadow: 0 2px 0 #7c2d12, 0 4px 8px rgba(234, 88, 12, 0.3);
+    }
+
+    .btn-next {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      box-shadow: 0 6px 0 #0c4a6e, 0 10px 18px rgba(2, 132, 199, 0.35);
+    }
+    .btn-next:active:not(:disabled) {
+      box-shadow: 0 2px 0 #0c4a6e, 0 4px 8px rgba(2, 132, 199, 0.3);
+    }
+
+    .btn-ctrl {
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+      border: 3px solid #94a3b8;
+      box-shadow: 0 5px 0 #94a3b8, 0 8px 14px rgba(15, 23, 42, 0.12);
+    }
+    .btn-ctrl:active,
+    .btn-ctrl.is-pressed {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #94a3b8, 0 3px 6px rgba(15, 23, 42, 0.1);
+      background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+    }
+
+    .btn-throw {
+      background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+      border: 3px solid #9d174d;
+      box-shadow: 0 5px 0 #831843, 0 8px 14px rgba(219, 39, 119, 0.3);
+    }
+    .btn-throw:active,
+    .btn-throw.is-pressed {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #831843, 0 3px 6px rgba(219, 39, 119, 0.25);
+    }
+
+    /* キャンバスが親枠にぴったり収まりつつリサイズ対応 */
+    .canvas-shell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      max-height: 62vh;
+      min-height: 300px;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      border: 5px solid #ffffff;
+      box-shadow: 0 12px 28px rgba(30, 41, 59, 0.16), inset 0 0 0 3px #bae6fd;
+      background: #f0f9ff;
+      touch-action: none;
+    }
+
+    canvas#gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen px-3 py-3 sm:px-6 sm:py-5">
+  <!-- メインコンテナ -->
+  <div class="w-full max-w-4xl flex flex-col items-center gap-3 sm:gap-4">
+
+    <!-- ヘッダー＆ステータスバー -->
+    <header class="w-full bg-white/90 backdrop-blur rounded-3xl px-4 py-3 sm:px-6 sm:py-3.5 shadow-md border-4 border-white flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+      <h1 class="text-xl sm:text-2xl md:text-3xl font-black tracking-wide text-pink-600 flex items-center gap-2">
+        <span>🍩</span>
+        <span>スマイル＆ドーナツ</span>
+        <span>😊</span>
+      </h1>
+
+      <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+        <div class="bg-sky-100 border-2 border-sky-300 rounded-2xl px-3 py-1.5 text-base sm:text-xl font-extrabold text-sky-900">
+          ステージ <span id="stageValue" class="text-sky-600 text-xl sm:text-2xl">1</span>
+        </div>
+        <div class="bg-amber-100 border-2 border-amber-300 rounded-2xl px-3 py-1.5 text-base sm:text-xl font-extrabold text-amber-900">
+          スコア <span id="scoreValue" class="text-amber-600 text-xl sm:text-2xl">0</span>
+        </div>
+        <button
+          id="muteBtn"
+          type="button"
+          aria-label="効果音の切り替え"
+          class="pop-btn bg-purple-100 hover:bg-purple-200 border-2 border-purple-300 text-purple-900 rounded-2xl px-3 py-1.5 text-sm sm:text-lg font-extrabold flex items-center gap-1.5 cursor-pointer"
+        >
+          <span id="muteIcon">🔊</span>
+          <span id="muteLabel">おと：オン</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 上部アクションボタン（スタート・リトライ） -->
+    <div class="w-full flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+      <button
+        id="startBtn"
+        type="button"
+        class="pop-btn btn-start text-white font-black text-lg sm:text-2xl px-6 py-2.5 sm:px-8 sm:py-3 rounded-full cursor-pointer flex items-center gap-2"
+      >
+        <span>▶</span>
+        <span>スタート</span>
+      </button>
+
+      <button
+        id="retryBtn"
+        type="button"
+        class="pop-btn btn-retry text-white font-black text-lg sm:text-2xl px-6 py-2.5 sm:px-8 sm:py-3 rounded-full cursor-pointer flex items-center gap-2"
+      >
+        <span>🔄</span>
+        <span>やりなおし</span>
+      </button>
+    </div>
+
+    <!-- ゲームキャンバス＆オーバーレイ -->
+    <div id="canvasContainer" class="canvas-shell">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- スタート前・ステージクリア・ゲームオーバーのオーバーレイ -->
+      <div
+        id="overlayPanel"
+        class="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px] flex flex-col items-center justify-center p-4 text-center z-10"
+      >
+        <div class="bg-white/95 border-4 border-amber-300 rounded-3xl px-5 py-5 sm:px-8 sm:py-7 max-w-md w-full shadow-2xl flex flex-col items-center gap-3 sm:gap-4">
+          <div id="overlayEmoji" class="text-4xl sm:text-6xl">🍩😊🍩</div>
+          <h2 id="overlayTitle" class="text-2xl sm:text-4xl font-black text-slate-800">
+            あそびかた
+          </h2>
+          <p id="overlayMessage" class="text-sm sm:text-lg font-bold text-slate-600 leading-relaxed">
+          スマイルマークにドーナツを<span class="text-pink-600 text-lg sm:text-xl">3かい</span>あてると消えるよ！<br />
+          下までおりてくる前にぜんぶ消そう！
+        </p>
+          <div id="overlayStats" class="hidden bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-2 text-base sm:text-xl font-extrabold text-amber-800 w-full">
+          </div>
+          <button
+            id="overlayActionBtn"
+            type="button"
+            class="pop-btn btn-start text-white font-black text-lg sm:text-2xl px-7 py-2.5 sm:px-9 sm:py-3.5 rounded-full cursor-pointer mt-1"
+          >
+            ゲームスタート！
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 画面下の操作ボタン（タッチ・マウス・クリック対応） -->
+    <div class="w-full max-w-2xl flex items-center justify-between gap-2 sm:gap-4 pt-1">
+      <button
+        id="leftBtn"
+        type="button"
+        aria-label="左へ動く"
+        class="pop-btn btn-ctrl flex-1 py-3 sm:py-4 rounded-2xl font-black text-xl sm:text-2xl text-slate-700 cursor-pointer flex items-center justify-center gap-1"
+      >
+        <span>◀</span>
+        <span>ひだり</span>
+      </button>
+
+      <button
+        id="throwBtn"
+        type="button"
+        aria-label="ドーナツを投げる"
+        class="pop-btn btn-throw flex-[1.35] py-3 sm:py-4 rounded-2xl font-black text-xl sm:text-2xl text-white cursor-pointer flex items-center justify-center gap-2"
+      >
+        <span>🍩</span>
+        <span>なげる！</span>
+      </button>
+
+      <button
+        id="rightBtn"
+        type="button"
+        aria-label="右へ動く"
+        class="pop-btn btn-ctrl flex-1 py-3 sm:py-4 rounded-2xl font-black text-xl sm:text-2xl text-slate-700 cursor-pointer flex items-center justify-center gap-1"
+      >
+        <span>みぎり</span>
+        <span>▶</span>
+      </button>
+    </div>
+
+    <!-- 操作説明フッター -->
+    <p class="text-xs sm:text-sm font-bold text-slate-600 text-center pb-1">
+      キー操作：← → でいどう ／ スペースキー でドーナツをなげる　｜　マウスやタップでもあそべるよ！
+    </p>
+  </div>
+
+  <script>
+    /**
+     * Web Audio API を使ったやさしい効果音マネージャー
+     * 外部音声ファイルを使わず、ブラウザ内蔵のシンセサイザーで音を鳴らします。
+     */
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      // ユーザー操作のタイミングで AudioContext を初期化・再開する
+      unlock() {
+        try {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        } catch (err) {
+          console.warn('音声の初期化に失敗しました:', err);
+        }
+      }
+
+      setMuted(isMuted) {
+        this.muted = isMuted;
+        if (!this.muted) {
+          this.unlock();
+          this.playClick();
+        }
+      }
+
+      playClick() {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.07);
+
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } catch (err) {
+          // 再生エラーは無視してゲーム進行を妨げない
+        }
+      }
+
+      playThrow() {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(740, now + 0.12);
+
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.13);
+        } catch (err) {}
+      }
+
+      playHit(remainingHp) {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          // 残りHPが減るほど少し高い音にしてヒット感をわかりやすくする
+          const baseFreq = remainingHp === 2 ? 460 : 600;
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.09);
+
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
+        } catch (err) {}
+      }
+
+      playPop() {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99]; // C5, E5, G5 の明るい和音
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            const t = now + idx * 0.045;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+          });
+        } catch (err) {}
+      }
+
+      playStageClear() {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const melody = [523.25, 659.25, 783.99, 1046.5];
+          melody.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            const t = now + idx * 0.1;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.17, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.23);
+          });
+        } catch (err) {}
+      }
+
+      playGameOver() {
+        if (this.muted) return;
+        this.unlock();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime;
+          const notes = [392.0, 349.23, 329.63, 261.63];
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            const t = now + idx * 0.14;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+          });
+        } catch (err) {}
+      }
+    }
+
+    /**
+     * ゲーム全体の状態管理・描画・物理演算を行うメインコントローラー
+     */
+    class SmileDonutGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.container = document.getElementById('canvasContainer');
+
+        // UI要素の参照
+        this.stageEl = document.getElementById('stageValue');
+        this.scoreEl = document.getElementById('scoreValue');
+        this.muteBtn = document.getElementById('muteBtn');
+        this.muteIcon = document.getElementById('muteIcon');
+        this.muteLabel = document.getElementById('muteLabel');
+        this.startBtn = document.getElementById('startBtn');
+        this.retryBtn = document.getElementById('retryBtn');
+        this.overlayPanel = document.getElementById('overlayPanel');
+        this.overlayEmoji = document.getElementById('overlayEmoji');
+        this.overlayTitle = document.getElementById('overlayTitle');
+        this.overlayMessage = document.getElementById('overlayMessage');
+        this.overlayStats = document.getElementById('overlayStats');
+        this.overlayActionBtn = document.getElementById('overlayActionBtn');
+        this.leftBtn = document.getElementById('leftBtn');
+        this.rightBtn = document.getElementById('rightBtn');
+        this.throwBtn = document.getElementById('throwBtn');
+
+        this.sound = new SoundEffects();
+
+        // 論理座標系（アスペクト比 4:3 に固定し、リサイズ時に拡大縮小して描画）
+        this.width = 800;
+        this.height = 600;
+        this.dpr = 1;
+
+        // ゲーム状態: 'title' | 'playing' | 'stageClear' | 'gameOver'
+        this.state = 'title';
+        // プレイヤー（自分のキャラクター：コック帽のジンジャーマン）
+        this.player = {
+          x: this.width / 2,
+          y: this.height - 54,
+          width: 66,
+          height: 54,
+          speed: 440,
+          cooldown: 0,
+          flashTimer: 0,
+          walkPhase: 0,
+          lastDonutColor: '#f472b6',
+          lastDonutSpecial: false
+        };
+
+        // 入力状態
+        this.keys = {
+          left: false,
+          right: false
+        };
+        this.touchMove = {
+          left: false,
+          right: false
+        };
+        this.pointerActive = false;
+        this.pointerTargetX = null;
+
+        // ゲームオブジェクト配列
+        this.smiles = [];
+        this.donuts = [];
+        this.particles = [];
+        this.popups = [];
+
+        // インベーダー風移動パラメータ
+        this.invaderDir = 1; // 1: 右へ移動, -1: 左へ移動
+        this.invaderSpeed = 75;
+        this.dropDistance = 24;
+
+        // 背景の雲やきらきら
+        this.clouds = [
+          { x: 110, y: 80, scale: 0.9, speed: 12 },
+          { x: 420, y: 130, scale: 0.7, speed: 8 },
+          { x: 670, y: 70, scale: 1.0, speed: 14 }
+        ];
+
+        this.lastTime = 0;
+        this.animFrameId = null;
+
+        this.resizeCanvas();
+        this.spawnSmilesForStage(1);
+        this.bindEvents();
+        this.updateHUD();
+        this.showOverlay('title');
+      }
+
+      // コンテナサイズに合わせてキャンバス解像度を調整
+      resizeCanvas() {
+        try {
+          const rect = this.container.getBoundingClientRect();
+          const cssWidth = Math.max(280, rect.width);
+          const cssHeight = Math.max(210, rect.height);
+          this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+          this.canvas.width = Math.round(cssWidth * this.dpr);
+          this.canvas.height = Math.round(cssHeight * this.dpr);
+        } catch (err) {
+          console.warn('リサイズ処理でエラーが発生しました:', err);
+        }
+      }
+
+      // ステージに応じたスマイルマーク群を生成
+      spawnSmilesForStage(stageNum) {
+        this.smiles = [];
+        this.donuts = [];
+        this.particles = [];
+        this.popups = [];
+
+        const cols = 6;
+        // ステージ2以上では大きなスマイルの3列目を含めて3行並べる
+        const rows = stageNum >= 2 ? 3 : Math.min(4, 2 + Math.floor((stageNum + 1) / 2));
+        const radius = 26;
+        const gapX = 96;
+        const gapY = 74;
+
+        const totalWidth = (cols - 1) * gapX;
+        const startX = (this.width - totalWidth) / 2;
+        const startY = 76;
+
+        // ステージが進むと横移動速度が少し上がる（遊びやすさを保ちつつ挑戦感を出す）
+        this.invaderSpeed = Math.min(185, 72 + (stageNum - 1) * 18);
+        this.invaderDir = 1;
+
+        const palette = ['#fde047', '#facc15', '#fbbf24', '#fcd34d'];
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            // ステージ2以降、一番上の列（r === 0）の中央付近（c === 1, 2, 3）に大きなスマイルを3体配置
+            const isBigSmile = stageNum >= 2 && r === 0 && c >= 1 && c <= 3;
+            const smileRadius = isBigSmile ? 36 : radius;
+
+            this.smiles.push({
+              x: startX + c * gapX,
+              y: startY + r * gapY + (isBigSmile ? 8 : 0),
+              radius: smileRadius,
+              hp: 3,               // ふつうのドーナツで減る残り回数（3回）
+              maxHp: 3,
+              normalHits: 0,       // ふつうのドーナツを食べた回数（10個で消える）
+              normalNeed: 10,
+              specialHits: 0,      // とくべつドーナツを食べた回数（3個で消える）
+              specialNeed: 3,
+              isBigSmile: isBigSmile,
+              hitFlash: 0,
+              chewTimer: 0,
+              chewPhase: 0,
+              eatenDonutColor: '#f472b6',
+              color: isBigSmile ? '#fb923c' : palette[(r + c) % palette.length]
+            });
+          }
+        }
+      }
+
+      startNewGame() {
+        this.sound.unlock();
+        this.sound.playClick();
+        this.score = 0;
+        this.stage = 1;
+        this.player.x = this.width / 2;
+        this.player.cooldown = 0;
+        this.player.flashTimer = 0;
+        this.spawnSmilesForStage(this.stage);
+        this.state = 'playing';
+        this.hideOverlay();
+        this.updateHUD();
+      }
+
+      startNextStage() {
+        this.sound.unlock();
+        this.sound.playClick();
+        this.stage += 1;
+        this.player.x = this.width / 2;
+        this.player.cooldown = 0;
+        this.player.flashTimer = 0;
+        this.spawnSmilesForStage(this.stage);
+        this.state = 'playing';
+        this.hideOverlay();
+        this.updateHUD();
+      }
+
+      triggerGameOver(reason) {
+        if (this.state === 'gameOver') return;
+        this.state = 'gameOver';
+        this.player.flashTimer = 0.6;
+        this.sound.playGameOver();
+        this.updateHUD();
+        this.showOverlay('gameOver', reason);
+      }
+
+      triggerStageClear() {
+        if (this.state === 'stageClear') return;
+        this.state = 'stageClear';
+        const bonus = 50 * this.stage;
+        this.score += bonus;
+        this.sound.playStageClear();
+        this.updateHUD();
+        this.showOverlay('stageClear', bonus);
+      }
+
+      // ドーナツを上に投げる（ランダムで1発で消せる特別なドーナツが登場）
+      throwDonut() {
+        if (this.state !== 'playing') return;
+        if (this.player.cooldown > 0) return;
+
+        // 画面上に同時に飛べるドーナツ数を制限して連打しすぎを調整
+        if (this.donuts.length >= 6) return;
+
+        // 約25%の確率で「とくべつドーナツ」が登場し、当たると1回でスマイルが消える
+        const isSpecial = Math.random() < 0.25;
+
+        const flavors = [
+          { icing: '#f472b6', sprinkle: '#fef08a' }, // いちごチョコ
+          { icing: '#38bdf8', sprinkle: '#fbcfe8' }, // ソーダチョコ
+          { icing: '#a78bfa', sprinkle: '#fde047' }, // ぶどうチョコ
+          { icing: '#fb923c', sprinkle: '#ffffff' }  // キャラメルチョコ
+        ];
+        const flavor = isSpecial
+          ? { icing: '#facc15', sprinkle: '#ec4899' } // とくべつレインボーゴールドドーナツ
+          : flavors[this.donuts.length % flavors.length];
+
+        this.player.lastDonutColor = flavor.icing;
+        this.player.lastDonutSpecial = isSpecial;
+
+        // ジンジャーマンの頭・コック帽のすぐ上からドーナツを投げる
+        this.donuts.push({
+          x: this.player.x,
+          y: this.player.y - 36,
+          radius: isSpecial ? 18 : 15,
+          speed: isSpecial ? 620 : 560,
+          rotation: 0,
+          rotSpeed: (Math.random() > 0.5 ? 1 : -1) * (isSpecial ? 11 : 8.5),
+          icing: flavor.icing,
+          sprinkle: flavor.sprinkle,
+          isSpecial: isSpecial
+        });
+
+        this.player.cooldown = 0.22;
+        this.player.throwAnimTimer = 0.18;
+        this.sound.playThrow();
+      }
+
+      // ヒットや消滅時のエフェクト生成
+      spawnBurst(x, y, colors, count, speedMax = 180) {
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+          const speed = 50 + Math.random() * speedMax;
+          this.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 4 + Math.random() * 6,
+            color: colors[i % colors.length],
+            life: 0.45 + Math.random() * 0.25,
+            maxLife: 0.7
+          });
+        }
+      }
+
+      spawnPopup(x, y, text, color = '#ea580c') {
+        this.popups.push({
+          x,
+          y,
+          text,
+          color,
+          life: 0.85,
+          maxLife: 0.85
+        });
+      }
+
+      updateHUD() {
+        this.stageEl.textContent = String(this.stage);
+        this.scoreEl.textContent = String(this.score);
+      }
+
+      showOverlay(mode, extraInfo = null) {
+        this.overlayPanel.classList.remove('hidden');
+        this.overlayStats.classList.add('hidden');
+        this.overlayStats.textContent = '';
+
+        this.overlayActionBtn.classList.remove('btn-start', 'btn-retry', 'btn-next');
+
+        if (mode === 'title') {
+          this.overlayEmoji.textContent = '🍩😊🍩';
+          this.overlayTitle.textContent = 'あそびかた';
+          this.overlayMessage.innerHTML =
+            'コック帽のジンジャーマンがドーナツをなげるよ！<br />' +
+            'スマイルマークにドーナツを<span class="text-pink-600 text-lg sm:text-xl">3かい</span>食べさせると消えるよ！<br />' +
+            'ときどき出る<span class="text-amber-500 text-lg sm:text-xl">とくべつドーナツ</span>なら<span class="text-pink-600 text-lg sm:text-xl">1かい</span>で消えるよ！';
+          this.overlayActionBtn.textContent = 'ゲームスタート！';
+          this.overlayActionBtn.classList.add('btn-start');
+          this.overlayActionBtn.onclick = () => this.startNewGame();
+        } else if (mode === 'stageClear') {
+          this.overlayEmoji.textContent = '🎉🍩✨';
+          this.overlayTitle.textContent = `ステージ ${this.stage} クリア！`;
+          this.overlayMessage.innerHTML =
+            'スマイルマークがぜんぶドーナツを食べて満足したよ！<br />つぎのステージにすすもう！';
+          this.overlayStats.textContent = `クリアボーナス +${extraInfo} てん！いまのスコア：${this.score} てん`;
+          this.overlayStats.classList.remove('hidden');
+          this.overlayActionBtn.textContent = 'つぎのステージへ！';
+          this.overlayActionBtn.classList.add('btn-next');
+          this.overlayActionBtn.onclick = () => this.startNextStage();
+        } else if (mode === 'gameOver') {
+          this.overlayEmoji.textContent = '💫🍩💫';
+          this.overlayTitle.textContent = 'ゲームオーバー';
+          this.overlayMessage.innerHTML =
+            extraInfo || 'スマイルマークが下までおりてきたよ！<br />やりなおしボタンでもういちど挑戦しよう！';
+          this.overlayStats.textContent = `ステージ ${this.stage} ／ さいごのスコア：${this.score} てん`;
+          this.overlayStats.classList.remove('hidden');
+          this.overlayActionBtn.textContent = 'もういちどあそぶ！';
+          this.overlayActionBtn.classList.add('btn-retry');
+          this.overlayActionBtn.onclick = () => this.startNewGame();
+        }
+      }
+
+      hideOverlay() {
+        this.overlayPanel.classList.add('hidden');
+      }
+
+      // 毎フレームのゲーム更新処理
+      update(dt) {
+        for (const c of this.clouds) {
+          c.x += c.speed * dt;
+          if (c.x - 90 * c.scale > this.width) {
+            c.x = -90 * c.scale;
+          }
+        }
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.vy += 260 * dt;
+          p.life -= dt;
+          if (p.life <= 0) {
+            this.particles.splice(i, 1);
+          }
+        }
+
+        for (let i = this.popups.length - 1; i >= 0; i--) {
+          const pop = this.popups[i];
+          pop.y -= 36 * dt;
+          pop.life -= dt;
+          if (pop.life <= 0) {
+            this.popups.splice(i, 1);
+          }
+        }
+
+        if (this.state !== 'playing') {
+          return;
+        }
+
+        // クールダウン・点滅・投げモーションタイマー更新
+        if (this.player.cooldown > 0) {
+          this.player.cooldown = Math.max(0, this.player.cooldown - dt);
+        }
+        if (this.player.flashTimer > 0) {
+          this.player.flashTimer = Math.max(0, this.player.flashTimer - dt);
+        }
+        if (this.player.throwAnimTimer > 0) {
+          this.player.throwAnimTimer = Math.max(0, this.player.throwAnimTimer - dt);
+        }
+
+        // プレイヤーの移動（キーボード／画面ボタン／マウス・タッチドラッグ）
+        const prevX = this.player.x;
+        let moveDir = 0;
+        if (this.keys.left || this.touchMove.left) moveDir -= 1;
+        if (this.keys.right || this.touchMove.right) moveDir += 1;
+
+        if (moveDir !== 0) {
+          this.player.x += moveDir * this.player.speed * dt;
+        } else if (this.pointerActive && this.pointerTargetX !== null) {
+          const diff = this.pointerTargetX - this.player.x;
+          const maxStep = this.player.speed * 1.15 * dt;
+          if (Math.abs(diff) <= maxStep) {
+            this.player.x = this.pointerTargetX;
+          } else {
+            this.player.x += Math.sign(diff) * maxStep;
+          }
+        }
+
+        const margin = this.player.width / 2 + 12;
+        this.player.x = Math.max(margin, Math.min(this.width - margin, this.player.x));
+
+        const movedDist = Math.abs(this.player.x - prevX);
+        if (movedDist > 0.2) {
+          this.player.walkPhase += dt * 15;
+        } else {
+          this.player.walkPhase = 0;
+        }
+
+        // ドーナツの移動とスマイルマークとの当たり判定
+        for (let di = this.donuts.length - 1; di >= 0; di--) {
+          const d = this.donuts[di];
+          d.y -= d.speed * dt;
+          d.rotation += d.rotSpeed * dt;
+
+          if (d.y + d.radius < 0) {
+            this.donuts.splice(di, 1);
+            continue;
+          }
+
+          let donutConsumed = false;
+          for (let si = this.smiles.length - 1; si >= 0; si--) {
+            const s = this.smiles[si];
+            const dx = d.x - s.x;
+            const dy = d.y - s.y;
+            const hitDist = d.radius + s.radius;
+
+            if (dx * dx + dy * dy <= hitDist * hitDist) {
+              donutConsumed = true;
+              const isOneShotSpecial = Boolean(d.isSpecial);
+              s.hitFlash = 0.14;
+              s.chewTimer = 0.75;
+              s.chewPhase = 0;
+              s.eatenDonutColor = d.icing;
+
+              if (s.isBigSmile) {
+                // 大きなスマイル：ふつう10個またはとくべつ3個食べさせると消える
+                if (isOneShotSpecial) {
+                  s.specialHits += 1;
+                } else {
+                  s.normalHits += 1;
+                }
+
+                const normalLeft = Math.max(0, s.normalNeed - s.normalHits);
+                const specialLeft = Math.max(0, s.specialNeed - s.specialHits);
+                const isDefeated = normalLeft <= 0 || specialLeft <= 0;
+
+                if (isDefeated) {
+                  this.score += 80;
+                  this.sound.playPop();
+                  this.spawnBurst(
+                    s.x,
+                    s.y,
+                    ['#fb923c', '#facc15', '#f472b6', '#38bdf8', '#ffffff'],
+                    28,
+                    260
+                  );
+                  this.spawnPopup(s.x, s.y - 16, 'おおきなスマイル満腹！+80', '#db2777');
+                  this.smiles.splice(si, 1);
+                } else {
+                  this.score += isOneShotSpecial ? 25 : 10;
+                  this.sound.playHit(Math.min(normalLeft, specialLeft));
+                  this.spawnBurst(
+                    d.x,
+                    d.y,
+                    [d.icing, '#fef08a', '#ffffff'],
+                    9,
+                    135
+                  );
+                  const statusLabel = isOneShotSpecial
+                    ? `とくべつあと${specialLeft}こ / ふつうあと${normalLeft}こ`
+                    : `ふつうあと${normalLeft}こ / とくべつあと${specialLeft}こ`;
+                  this.spawnPopup(s.x, s.y - s.radius - 12, statusLabel, '#ea580c');
+                }
+              } else {
+                // 通常スマイル：とくべつドーナツ1個、またはふつうのドーナツ3個で消える
+                s.hp = isOneShotSpecial ? 0 : s.hp - 1;
+
+                if (s.hp <= 0) {
+                  this.score += isOneShotSpecial ? 40 : 30;
+                  this.sound.playPop();
+                  this.spawnBurst(
+                    s.x,
+                    s.y,
+                    isOneShotSpecial
+                      ? ['#facc15', '#f472b6', '#38bdf8', '#a855f7', '#ffffff']
+                      : ['#facc15', '#f472b6', '#38bdf8', '#4ade80'],
+                    isOneShotSpecial ? 24 : 18,
+                    isOneShotSpecial ? 250 : 215
+                  );
+                  this.spawnPopup(
+                    s.x,
+                    s.y - 12,
+                    isOneShotSpecial ? 'とくべつペロリ！+40' : 'ごちそうさま！+30',
+                    '#db2777'
+                  );
+                  this.smiles.splice(si, 1);
+                } else {
+                  this.score += 10;
+                  this.sound.playHit(s.hp);
+                  this.spawnBurst(
+                    d.x,
+                    d.y,
+                    [d.icing, '#fef08a', '#ffffff'],
+                    8,
+                    125
+                  );
+                  this.spawnPopup(s.x, s.y - 30, `モグッ！あと${s.hp}こ`, '#ea580c');
+                }
+              }
+
+              this.updateHUD();
+              break;
+            }
+          }
+
+          if (donutConsumed) {
+            this.donuts.splice(di, 1);
+          }
+        }
+
+        // すべて消えたらステージクリア
+        if (this.smiles.length === 0) {
+          this.triggerStageClear();
+          return;
+        }
+
+        // インベーダー風の横移動と端での折り返し・下降
+        let hitEdge = false;
+        for (const s of this.smiles) {
+          s.wobblePhase += dt * 4.5;
+          if (s.hitFlash > 0) {
+            s.hitFlash = Math.max(0, s.hitFlash - dt);
+          }
+          if (s.chewTimer > 0) {
+            s.chewTimer = Math.max(0, s.chewTimer - dt);
+            s.chewPhase += dt * 24;
+          }
+
+          const nextX = s.x + this.invaderDir * this.invaderSpeed * dt;
+          if (nextX - s.radius < 18 || nextX + s.radius > this.width - 18) {
+            hitEdge = true;
+          }
+        }
+
+        if (hitEdge) {
+          this.invaderDir *= -1;
+          for (const s of this.smiles) {
+            s.y += this.dropDistance;
+          }
+        } else {
+          for (const s of this.smiles) {
+            s.x += this.invaderDir * this.invaderSpeed * dt;
+          }
+        }
+
+        // ゲームオーバー判定（下まで降りてくる、またはジンジャーマンに当たる）
+        const bottomLimit = this.player.y - 46;
+        for (const s of this.smiles) {
+          if (s.y + s.radius >= bottomLimit) {
+            this.triggerGameOver('スマイルマークが下までおりてきたよ！<br />やりなおしボタンでもういちど挑戦しよう！');
+            return;
+          }
+
+          const dx = s.x - this.player.x;
+          const dy = s.y - this.player.y;
+          const playerHitDist = s.radius + 24;
+          if (dx * dx + dy * dy <= playerHitDist * playerHitDist) {
+            this.triggerGameOver('スマイルマークにあたっちゃった！<br />やりなおしボタンでもういちど挑戦しよう！');
+            return;
+          }
+        }
+      }
+
+      drawSmileEnemy(ctx, s) {
+        ctx.save();
+        const isChewing = s.chewTimer > 0;
+        const chewScaleX = isChewing ? 1 + Math.sin(s.chewPhase) * 0.09 : 1;
+        const chewScaleY = isChewing ? 1 - Math.sin(s.chewPhase) * 0.08 : 1;
+        const tilt = Math.sin(s.wobblePhase) * 0.08 + (isChewing ? Math.sin(s.chewPhase * 0.5) * 0.07 : 0);
+
+        ctx.translate(s.x, s.y);
+        ctx.rotate(tilt);
+        ctx.scale(chewScaleX, chewScaleY);
+
+        // 影
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.12)';
+        ctx.beginPath();
+        ctx.ellipse(0, s.radius + 5, s.radius * 0.8, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 顔本体（食べている間も明るくてかわいいスマイルカラーを維持）
+        ctx.fillStyle = s.hitFlash > 0 ? '#fef9c3' : s.color;
+        ctx.strokeStyle = '#ca8a04';
+        ctx.lineWidth = 3.5;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // ほっぺ（モグモグ中は少しふっくらピンク）
+        ctx.fillStyle = isChewing ? 'rgba(244, 114, 182, 0.75)' : 'rgba(244, 114, 182, 0.52)';
+        ctx.beginPath();
+        ctx.ellipse(-13.5, 4.5, isChewing ? 6.8 : 5.5, isChewing ? 4.4 : 3.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(13.5, 4.5, isChewing ? 6.8 : 5.5, isChewing ? 4.4 : 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 目（モグモグ中は ^ ^ のようなうれしい細目、通常はにっこり丸目）
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2.8;
+        ctx.lineCap = 'round';
+
+        if (isChewing) {
+          ctx.beginPath();
+          ctx.arc(-9.5, -3.5, 4.5, Math.PI * 1.12, Math.PI * 1.88);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(9.5, -3.5, 4.5, Math.PI * 1.12, Math.PI * 1.88);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(-9, -5, 3.5, 0, Math.PI * 2);
+          ctx.arc(9, -5, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 口（モグモグ中は黒色でパクパク開け閉めしてドーナツのかけらを頬張る表現）
+        if (isChewing) {
+          const openRatio = 0.45 + 0.55 * Math.abs(Math.sin(s.chewPhase));
+          const mouthRadiusX = s.isBigSmile ? 10 : 7.5;
+          const mouthRadiusY = (s.isBigSmile ? 4 : 3) + (s.isBigSmile ? 7 : 5.5) * openRatio;
+
+          ctx.fillStyle = '#1e293b';
+          ctx.beginPath();
+          ctx.ellipse(0, 8, mouthRadiusX, mouthRadiusY, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 口の中のドーナツのかけら
+          ctx.fillStyle = s.eatenDonutColor || '#f472b6';
+          ctx.beginPath();
+          ctx.arc(-2.5, 7.5, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#fcd34d';
+          ctx.beginPath();
+          ctx.arc(3, 8.5, 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          const smileArc = s.isBigSmile ? 14 : (s.hp === 3 ? 12 : s.hp === 2 ? 10.5 : 9);
+          ctx.arc(0, 2.5, smileArc, 0.15 * Math.PI, 0.85 * Math.PI);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // 残り回数をバッジ表示（大きなスマイルは「ふつう残り / とくべつ残り」を表示）
+        ctx.save();
+        if (s.isBigSmile) {
+          const normalLeft = Math.max(0, s.normalNeed - s.normalHits);
+          const specialLeft = Math.max(0, s.specialNeed - s.specialHits);
+          ctx.translate(s.x, s.y - s.radius - 13);
+
+          ctx.fillStyle = '#f97316';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.roundRect(-42, -11, 84, 22, 11);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 11px "M PLUS Rounded 1c", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`🍩${normalLeft} / ★${specialLeft}`, 0, 0.5);
+        } else {
+          ctx.translate(s.x + s.radius * 0.78, s.y - s.radius * 0.78);
+          ctx.fillStyle = s.hp === 3 ? '#22c55e' : s.hp === 2 ? '#f97316' : '#ef4444';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 11.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 13px "M PLUS Rounded 1c", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(s.hp), 0, 0.5);
+        }
+        ctx.restore();
+      }
+// ... existing code ... -->
+      drawPlayer(ctx, p) {
+        ctx.save();
+        const bobY = Math.abs(Math.sin(p.walkPhase)) * -3.5;
+        ctx.translate(p.x, p.y + bobY);
+
+        if (p.flashTimer > 0 && Math.floor(p.flashTimer * 20) % 2 === 0) {
+          ctx.globalAlpha = 0.5;
+        }
+
+        const isThrowing = p.throwAnimTimer > 0;
+        const armSwing = isThrowing ? -0.65 : Math.sin(p.walkPhase) * 0.18;
+        const legSwing = Math.sin(p.walkPhase) * 0.25;
+
+        // 影
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
+        ctx.beginPath();
+        ctx.ellipse(0, 26 - bobY, 24, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ジンジャーマンのあし
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.save();
+        ctx.translate(-8, 12);
+        ctx.rotate(legSwing);
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.roundRect(-5, 0, 10, 13, 5);
+        ctx.fill();
+        ctx.stroke();
+        // アイシングのくつ下模様
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, 9);
+        ctx.lineTo(3.5, 9);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(8, 12);
+        ctx.rotate(-legSwing);
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-5, 0, 10, 13, 5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(-3.5, 9);
+        ctx.lineTo(3.5, 9);
+        ctx.stroke();
+        ctx.restore();
+
+        // ジンジャーマンのうで（投げるときに片手を高く振り上げる）
+        ctx.save();
+        ctx.translate(-14, 1);
+        ctx.rotate(0.45 - armSwing);
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-12, -4.5, 14, 9, 4.5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(14, 1);
+        ctx.rotate(-0.45 + armSwing);
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-2, -4.5, 14, 9, 4.5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // ジンジャーマンのどうたい
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 15, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // どうたいのボタン（いちご＆ミントのアイシング）
+        ctx.fillStyle = '#f472b6';
+        ctx.beginPath();
+        ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(0, 8.5, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ジンジャーマンのあたま
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -11, 14.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // ほっぺ・目・にっこり口
+        ctx.fillStyle = 'rgba(244, 114, 182, 0.65)';
+        ctx.beginPath();
+        ctx.ellipse(-8.5, -8.5, 3.3, 2.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(8.5, -8.5, 3.3, 2.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-5, -12, 2.4, 0, Math.PI * 2);
+        ctx.arc(5, -12, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (isThrowing) {
+          ctx.arc(0, -7, 4.2, 0, Math.PI * 2);
+        } else {
+          ctx.arc(0, -8.5, 5.5, 0.15 * Math.PI, 0.85 * Math.PI);
+        }
+        ctx.stroke();
+
+        // 白いコック帽（ぷっくりした帽子＋リボン帯）
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(-8.5, -28, 8.5, 0, Math.PI * 2);
+        ctx.arc(0, -32, 10.5, 0, Math.PI * 2);
+        ctx.arc(8.5, -28, 8.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(-11, -26, 22, 6.5, 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // コック帽のピンクのリボンライン
+        ctx.fillStyle = '#f472b6';
+        ctx.fillRect(-9.5, -23.5, 19, 3);
+
+        // 投げた瞬間にジンジャーマンの手元からドーナツが投げ上がる演出
+        if (isThrowing) {
+          ctx.save();
+          ctx.translate(0, -39);
+          if (p.lastDonutSpecial) {
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 13, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = '#fcd34d';
+          ctx.strokeStyle = '#b45309';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, p.lastDonutSpecial ? 9.5 : 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = p.lastDonutColor || '#f472b6';
+          ctx.beginPath();
+          ctx.arc(0, 0, p.lastDonutSpecial ? 7.2 : 6, 0, Math.PI * 2);
+          ctx.arc(0, 0, 2.5, 0, Math.PI * 2, true);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      drawDonutProjectile(ctx, d) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rotation);
+
+        // とくべつドーナツはキラキラのオーラをつけて見分けやすくする
+        if (d.isSpecial) {
+          const pulse = 1 + Math.sin(performance.now() * 0.015) * 0.14;
+          ctx.save();
+          ctx.scale(pulse, pulse);
+          ctx.fillStyle = 'rgba(250, 204, 21, 0.36)';
+          ctx.beginPath();
+          ctx.arc(0, 0, d.radius + 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = d.isSpecial ? '#fef08a' : '#fcd34d';
+        ctx.strokeStyle = d.isSpecial ? '#db2777' : '#b45309';
+        ctx.lineWidth = d.isSpecial ? 3 : 2.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = d.icing;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.76, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = d.sprinkle;
+        const sprinkles = [
+          [-6, -4, 0.4],
+          [6, -3, -0.5],
+          [0, -7, 1.1],
+          [-5, 5, -0.8],
+          [5, 6, 0.7]
+        ];
+        for (const [sx, sy, rot] of sprinkles) {
+          ctx.save();
+          ctx.translate(sx, sy);
+          ctx.rotate(rot);
+          ctx.fillRect(-2.6, -1.1, 5.2, 2.2);
+          ctx.restore();
+        }
+
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+
+        ctx.strokeStyle = d.isSpecial ? '#db2777' : '#b45309';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.34, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (d.isSpecial) {
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 10px "M PLUS Rounded 1c", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('★', 0, -d.radius - 8);
+        }
+
+        ctx.restore();
+      }
+
+      drawDonutProjectile(ctx, d) {
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rotation);
+
+        ctx.fillStyle = '#fcd34d';
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = d.icing;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.76, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = d.sprinkle;
+        const sprinkles = [
+          [-6, -4, 0.4],
+          [6, -3, -0.5],
+          [0, -7, 1.1],
+          [-5, 5, -0.8],
+          [5, 6, 0.7]
+        ];
+        for (const [sx, sy, rot] of sprinkles) {
+          ctx.save();
+          ctx.translate(sx, sy);
+          ctx.rotate(rot);
+          ctx.fillRect(-2.6, -1.1, 5.2, 2.2);
+          ctx.restore();
+        }
+
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, d.radius * 0.34, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      render() {
+        const ctx = this.ctx;
+        ctx.save();
+
+        const scaleX = this.canvas.width / this.width;
+        const scaleY = this.canvas.height / this.height;
+        ctx.scale(scaleX, scaleY);
+
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+        skyGrad.addColorStop(0, '#bae6fd');
+        skyGrad.addColorStop(0.68, '#f0f9ff');
+        skyGrad.addColorStop(1, '#dcfce7');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        for (const c of this.clouds) {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.beginPath();
+          ctx.arc(0, 0, 26, 0, Math.PI * 2);
+          ctx.arc(24, -6, 30, 0, Math.PI * 2);
+          ctx.arc(50, 0, 24, 0, Math.PI * 2);
+          ctx.arc(24, 10, 24, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.fillStyle = '#86efac';
+        ctx.fillRect(0, this.height - 22, this.width, 22);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(0, this.height - 25, this.width, 5);
+
+        const dangerY = this.player.y - 46;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.28)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.moveTo(20, dangerY);
+        ctx.lineTo(this.width - 20, dangerY);
+        ctx.stroke();
+        ctx.restore();
+
+        for (const d of this.donuts) {
+          this.drawDonutProjectile(ctx, d);
+        }
+
+        for (const s of this.smiles) {
+          this.drawSmileEnemy(ctx, s);
+        }
+
+        this.drawPlayer(ctx, this.player);
+        this.drawEffects(ctx);
+
+        ctx.restore();
+      }
+
+      drawEffects(ctx) {
+        for (const p of this.particles) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        for (const pop of this.popups) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, pop.life / pop.maxLife);
+          ctx.font = '900 18px "M PLUS Rounded 1c", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#ffffff';
+          ctx.strokeText(pop.text, pop.x, pop.y);
+          ctx.fillStyle = pop.color;
+          ctx.fillText(pop.text, pop.x, pop.y);
+          ctx.restore();
+        }
+      }
+
+      // キーボード・マウス・タッチ・ボタンのイベント登録
+      bindEvents() {
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        // スタート・やりなおし・ミュートボタン
+        this.startBtn.addEventListener('click', () => this.startNewGame());
+        this.retryBtn.addEventListener('click', () => this.startNewGame());
+
+        this.muteBtn.addEventListener('click', () => {
+          const nextMuted = !this.sound.muted;
+          this.sound.setMuted(nextMuted);
+          this.muteIcon.textContent = nextMuted ? '🔇' : '🔊';
+          this.muteLabel.textContent = nextMuted ? 'おと：オフ' : 'おと：オン';
+        });
+
+        // キーボード操作（← / → で移動、Space でドーナツを投げる）
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            this.keys.left = true;
+            this.leftBtn.classList.add('is-pressed');
+          } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            this.keys.right = true;
+            this.rightBtn.classList.add('is-pressed');
+          } else if (e.code === 'Space' || e.key === ' ') {
+            e.preventDefault();
+            this.throwBtn.classList.add('is-pressed');
+            if (this.state === 'playing') {
+              this.throwDonut();
+            }
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+            this.keys.left = false;
+            this.leftBtn.classList.remove('is-pressed');
+          } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+            this.keys.right = false;
+            this.rightBtn.classList.remove('is-pressed');
+          } else if (e.code === 'Space' || e.key === ' ') {
+            this.throwBtn.classList.remove('is-pressed');
+          }
+        });
+
+        // 画面下の移動ボタン（マウス＆タッチ両対応）
+        const bindHoldButton = (btn, dirKey) => {
+          const setPressed = (active) => {
+            this.touchMove[dirKey] = active;
+            btn.classList.toggle('is-pressed', active);
+            if (active) {
+              this.sound.unlock();
+            }
+          };
+
+          btn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            setPressed(true);
+          });
+          ['pointerup', 'pointerleave', 'pointercancel'].forEach((evtName) => {
+            btn.addEventListener(evtName, () => setPressed(false));
+          });
+        };
+
+        bindHoldButton(this.leftBtn, 'left');
+        bindHoldButton(this.rightBtn, 'right');
+
+        // 画面下の「なげる！」ボタン
+        this.throwBtn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          this.throwBtn.classList.add('is-pressed');
+          this.sound.unlock();
+          if (this.state === 'playing') {
+            this.throwDonut();
+          }
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach((evtName) => {
+          this.throwBtn.addEventListener(evtName, () => {
+            this.throwBtn.classList.remove('is-pressed');
+          });
+        });
+
+        // キャンバス上のマウス移動・クリック・タップ操作
+        const clientToLogicalX = (clientX) => {
+          const rect = this.canvas.getBoundingClientRect();
+          if (rect.width <= 0) return this.player.x;
+          return ((clientX - rect.left) / rect.width) * this.width;
+        };
+
+        this.canvas.addEventListener('pointermove', (e) => {
+          if (this.state !== 'playing') return;
+          // マウス移動またはタッチドラッグで自機が追従する
+          if (e.pointerType === 'mouse' || this.pointerActive) {
+            this.pointerTargetX = clientToLogicalX(e.clientX);
+          }
+        });
+
+        this.canvas.addEventListener('pointerdown', (e) => {
+          this.sound.unlock();
+          if (this.state !== 'playing') return;
+          this.pointerActive = true;
+          this.pointerTargetX = clientToLogicalX(e.clientX);
+          this.throwDonut();
+        });
+
+        window.addEventListener('pointerup', () => {
+          this.pointerActive = false;
+        });
+      }
+
+      // メインループ開始
+      startLoop() {
+        const tick = (timestamp) => {
+          if (!this.lastTime) {
+            this.lastTime = timestamp;
+          }
+          const dt = Math.min(0.05, (timestamp - this.lastTime) / 1000);
+          this.lastTime = timestamp;
+
+          this.update(dt);
+          this.render();
+
+          this.animFrameId = requestAnimationFrame(tick);
+        };
+
+        this.animFrameId = requestAnimationFrame(tick);
+      }
+    }
+
+    // ページ読み込み完了後にゲームを初期化してアニメーションループを開始
+    window.addEventListener('load', () => {
+      try {
+        const game = new SmileDonutGame();
+        game.startLoop();
+      } catch (err) {
+        console.error('ゲームの起動中にエラーが発生しました:', err);
+      }
+    });
+  </script>
+</body>
+</html>
